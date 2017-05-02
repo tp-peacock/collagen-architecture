@@ -5,7 +5,7 @@ atom_style			full  					#format of the configurational input
 #bond_style     		harmonic
 boundary 			p p p 				   		#periodic boundaries in all directions
 atom_modify			sort 0 1   					#format of the output
-read_data			config.data  					#file from which the initial configuraiton, bonds, and angles are read
+read_data			test.data  					#file from which the initial configuraiton, bonds, and angles are read
 neighbor        1 bin
 neigh_modify		every 1 delay 1 			#how the neighbour list is built
 pair_style			lj/cut 1.12  				#define the potential and the largest cut-off in the system

@@ -1,0 +1,21 @@
+#added some comments, visualise the oputput with "vmd test.xyz -e vmd_script"
+
+units				lj 							#reduced MD units
+atom_style			full  					#format of the configurational input
+#bond_style     		harmonic
+boundary 			p p p 				   		#periodic boundaries in all directions
+atom_modify			sort 0 1   					#format of the output
+read_data			config.data  					#file from which the initial configuraiton, bonds, and angles are read
+neighbor        1 bin
+neigh_modify		every 1 delay 1 			#how the neighbour list is built
+pair_style			lj/cut 1.12  				#define the potential and the largest cut-off in the system
+pair_coeff			1 1 10 1.0 1.12 			#interactions between particles of type 1: epsilon, sigma, cut-off
+pair_modify			shift yes 					#shift the potential to 0 at the cut-off to ensure continuity
+#bond_coeff 			* 8 0.9 
+dump				0 all xyz 100 test.xyz		#write the output file in the xyz form every 100 steps
+velocity 			all create 1.0 1 			#create the initail velocities, around temp=1
+fix					 0 all rigid/nve molecule					#perform nve integration
+fix					3 all langevin 1 1 1 1000 	#add random noise via langevin equation of motion
+thermo				300							#how often the output is written
+timestep			0.001						#size of the time-step for the integration
+run					250000						#run the simulation for this number of steps

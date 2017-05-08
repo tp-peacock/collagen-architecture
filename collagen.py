@@ -27,25 +27,19 @@ def voxelise(dim,vox_size):
 	return dim
 
 
-def collagenMonomer(length,dim,data,mononomerId,vox_size):
+def collagenMonomer(length,xlo,xhi,ylo,yhi,zlo,zhi,data,mononomerId,cutoff):
 
-	#resize box which atoms can be placed in to a multiple of the voxel size (note: does not change actual box size of simulation)
-	[xlo, xhi, ylo, yhi, zlo, zhi] = dim
-	print xlo, xhi, ylo, yhi, zlo, zhi
+	x_0 = random.uniform(xlo,xhi)
+	y_0 = random.uniform(ylo,yhi)
+	z_0 = random.uniform(zlo,zhi)
 
-	[x_0, y_0, z_0] = voxelise([random.uniform(xlo,xhi), random.uniform(ylo,yhi), random.uniform(zlo,zhi)],vox_size)
-
-
-	delta = randomSphere(vox_size)
-	print "x0 y0 z0: ", x_0, y_0, z_0
-	print "delta: ", delta
+	delta = randomSphere(cutoff)
 
 	charge_dist = [9.994870, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000, 
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
 				   -9.994750, 9.993550, 0.000000, 0.000000, -0.005370, 0.000000,
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
-
 
 	for i in range(length):
 		# occupied_xyz = []
@@ -63,6 +57,15 @@ def collagenMonomer(length,dim,data,mononomerId,vox_size):
 
 
 
+def redistribution(data,length):
+	ends = []
+	for atom in data.atoms:	
+		if atom.atomId%length == 1 or atom.atomId%length == 0:
+			ends.append(atom)
+
+
+
+
 def main():
 	
 	xlo = -50
@@ -72,19 +75,22 @@ def main():
 	zlo = -50
 	zhi = 50
 
-	dim = [xlo, xhi, ylo, yhi, zlo, zhi]
-
 	excl_zone = 1.12 #should be the lj cut off
+
+	monomer_length = 30
 
 	data = lb.LammpsData(atomTypes=1, xlo = xlo, xhi = xhi, ylo = ylo, yhi = yhi, zlo = zlo, zhi = zhi)
 	data.addMass(1,1.0)
 
 	#resize box which atoms can be placed in to a multiple of the voxel size (note: does not change actual box size of simulation)
-	dim = voxelise(dim,excl_zone) 
+	#dim = voxelise(dim,excl_zone) 
 
-	for i in range(90):
+	for i in range(100):
 		# collagenMonomer(30,xlo,xhi,ylo,yhi,zlo,zhi,data,i,excl_zone)
-		collagenMonomer(30,dim,data,i,excl_zone)
+		collagenMonomer(monomer_length,xlo,xhi,ylo,yhi,zlo,zhi,data,i,excl_zone)
+
+	redistribution(data, monomer_length)
+
 	f = open('lammps.data', 'w')
 
 	f.write(str(data))

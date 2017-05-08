@@ -16,52 +16,48 @@ def randomSphere(r):
 	y*=scale
 	z*=scale
 
-	return x,y,z
+	return round(x,3),round(y,3),round(z,3)
+
+def voxelise(dim,vox_size):
+	for i in range(len(dim)):
+		if dim[i] >= 0:
+			dim[i] = math.floor(dim[i]/vox_size)*vox_size
+		else:
+			dim[i] = math.ceil(dim[i]/vox_size)*vox_size
+	return dim
 
 
+def collagenMonomer(length,dim,data,mononomerId,vox_size):
 
-def pythagoras(dim1):
-	dim2 = dim1/(math.sqrt(2))
-	dim3 = dim1/(math.sqrt(3))
-	return dim1, dim2, dim3
+	#resize box which atoms can be placed in to a multiple of the voxel size (note: does not change actual box size of simulation)
+	[xlo, xhi, ylo, yhi, zlo, zhi] = dim
+	print xlo, xhi, ylo, yhi, zlo, zhi
 
-def collagenMonomer(length,xlo,xhi,ylo,yhi,zlo,zhi,data,mononomerId):
+	[x_0, y_0, z_0] = voxelise([random.uniform(xlo,xhi), random.uniform(ylo,yhi), random.uniform(zlo,zhi)],vox_size)
 
-	x_0 = random.randrange(xlo,xhi,1)
-	y_0 = random.randrange(xlo,xhi,1)
-	z_0 = random.randrange(xlo,xhi,1)
 
-	# diameters = pythagoras(1)
+	delta = randomSphere(vox_size)
+	print "x0 y0 z0: ", x_0, y_0, z_0
+	print "delta: ", delta
 
-	# orient = random.randrange(7)
+	charge_dist = [9.994870, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000, 
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
+				   -9.994750, 9.993550, 0.000000, 0.000000, -0.005370, 0.000000,
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
 
-	# for i in range(length):
-	# 	delta1d = i*diameters[0]
-	# 	delta2d = i*diameters[1]
-	# 	delta3d = i*diameters[2]
-
-	# 	if orient == 0:
-	# 		data.addAtom(1,0.5,x_0+delta1d,y_0,z_0,mononomerId)
-	# 	if orient == 1:
-	# 		data.addAtom(1,0.5,x_0,y_0+delta1d,z_0,mononomerId)
-	# 	if orient == 2:	
-	# 		data.addAtom(1,0.5,x_0,y_0,z_0+delta1d,mononomerId)
-
-	# 	if orient == 3:
-	# 		data.addAtom(1,0.5,x_0+delta2d,y_0+delta2d,z_0,mononomerId)
-	# 	if orient == 4:
-	# 		data.addAtom(1,0.5,x_0,y_0+delta2d,z_0+delta2d,mononomerId)
-	# 	if orient == 5:	
-	# 		data.addAtom(1,0.5,x_0+delta2d,y_0,z_0+delta2d,mononomerId)
-
-	# 	if orient == 6:	
-	# 		data.addAtom(1,0.5,x_0+delta3d,y_0+delta3d,z_0+delta3d,mononomerId)
-
-	delta = randomSphere(1)
 
 	for i in range(length):
+		# occupied_xyz = []
+		# for atom in data.atoms:
+		# 	occupied_xyz.append([atom.x,atom.y,atom.z])
 
-		data.addAtom(1,0.5,x_0+i*delta[0],y_0+i*delta[1],z_0+i*delta[2],mononomerId)
+		# if [x_0+i*delta[0],y_0+i*delta[1],z_0+i*delta[2]] in occupied_xyz:
+		#  	print "Duplicate in xyz!", x_0+i*delta[0],  y_0+i*delta[1], z_0+i*delta[2]
+
+		data.addAtom(1,charge_dist[i],x_0+i*delta[0],y_0+i*delta[1],z_0+i*delta[2],mononomerId)
+		# embed()
+		# data.atoms = data.atoms[:-i+1]
 
 	return 0
 
@@ -69,27 +65,31 @@ def collagenMonomer(length,xlo,xhi,ylo,yhi,zlo,zhi,data,mononomerId):
 
 def main():
 	
-	xlo = -200
-	xhi = 200
+	xlo = -50
+	xhi = 50
 	ylo = -50
 	yhi = 50
 	zlo = -50
 	zhi = 50
 
+	dim = [xlo, xhi, ylo, yhi, zlo, zhi]
+
+	excl_zone = 1.12 #should be the lj cut off
+
 	data = lb.LammpsData(atomTypes=1, xlo = xlo, xhi = xhi, ylo = ylo, yhi = yhi, zlo = zlo, zhi = zhi)
 	data.addMass(1,1.0)
 
-	for i in range(20):	
-		collagenMonomer(16,xlo,xhi,ylo,yhi,zlo,zhi,data,i)
+	#resize box which atoms can be placed in to a multiple of the voxel size (note: does not change actual box size of simulation)
+	dim = voxelise(dim,excl_zone) 
 
+	for i in range(90):
+		# collagenMonomer(30,xlo,xhi,ylo,yhi,zlo,zhi,data,i,excl_zone)
+		collagenMonomer(30,dim,data,i,excl_zone)
 	f = open('lammps.data', 'w')
 
 	f.write(str(data))
 
 	f.close()
-
-	for i in range(50):
-		print randomSphere(1)
 
 	return 0
 

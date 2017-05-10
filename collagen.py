@@ -16,6 +16,51 @@ class Box:
 		self.zlo = zlo
 		self.zhi = zhi
 
+
+class Monomer:
+
+	def __init__(self, num_of_atoms, atom_radius, charge_dist):
+
+		self.num_of_atoms = num_of_atoms
+		self.atom_radius = atom_radius
+		self.length = num_of_atoms*atom_radius*2
+		self.charge_dist = charge_dist
+		self.end0 = []
+		self.end1 = []
+		self.delta = None
+
+	def setEndPoints(self,box):
+
+		x0 = random.uniform(box.xlo,box.xhi)
+		y0 = random.uniform(box.ylo,box.yhi)
+		z0 = random.uniform(box.zlo,box.zhi)
+		self.end0 = [x0,y0,z0]
+
+		self.delta = randomSphere(self.atom_radius)
+		self.end1 = [x0+self.delta[0]*self.length,y0+self.delta[1]*self.length,z0+self.delta[2]*self.length]
+		return 0
+
+
+class MonomerData(lb.LammpsData):
+
+	def __init__(self,atomTypes=0,bondTypes=0,angleTypes=0,xlo=-200,xhi=200,ylo=-50,yhi=50,zlo=-50,zhi=50):
+		lb.LammpsData.__init__(self,atomTypes,bondTypes,angleTypes,xlo,xhi,ylo,yhi,zlo,zhi)
+		self.monomers = []
+
+
+	def addMonomer(self,monomer,monomerId):
+		
+		for i in range(monomer.num_of_atoms):
+			self.addAtom(1,
+				         monomer.charge_dist[i],
+				         monomer.end0[0]+i*monomer.delta[0],
+						 monomer.end0[1]+i*monomer.delta[1],
+						 monomer.end0[2]+i*monomer.delta[2],
+						 monomerId)
+		self.monomers.append(monomer)
+		return monomerId
+
+
 def randomSphere(r):
 	x = random.uniform(-1,1)
 	y = random.uniform(-1,1)
@@ -29,88 +74,14 @@ def randomSphere(r):
 
 	return round(x,3),round(y,3),round(z,3)
 
-def voxelise(dim,vox_size):
-	for i in range(len(dim)):
-		if dim[i] >= 0:
-			dim[i] = math.floor(dim[i]/vox_size)*vox_size
-		else:
-			dim[i] = math.ceil(dim[i]/vox_size)*vox_size
-	return dim
 
+# def findEnds(data, length):
+# 	ends = []
+# 	for atom in data.atoms:	
+# 		if atom.atomId%length == 1 or atom.atomId%length == 0:
+# 			ends.append(atom)	
+# 	return ends
 
-def collagenMonomer(length,box,data,mononomerId,cutoff):
-
-	x_0 = random.uniform(box.xlo,box.xhi)
-	y_0 = random.uniform(box.ylo,box.yhi)
-	z_0 = random.uniform(box.zlo,box.zhi)
-
-	delta = randomSphere(cutoff)
-
-	charge_dist = [9.994870, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000, 
-				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
-				   -9.994750, 9.993550, 0.000000, 0.000000, -0.005370, 0.000000,
-				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
-				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
-
-	for i in range(length):
-		# occupied_xyz = []
-		# for atom in data.atoms:
-		# 	occupied_xyz.append([atom.x,atom.y,atom.z])
-
-		# if [x_0+i*delta[0],y_0+i*delta[1],z_0+i*delta[2]] in occupied_xyz:
-		#  	print "Duplicate in xyz!", x_0+i*delta[0],  y_0+i*delta[1], z_0+i*delta[2]
-
-		data.addAtom(1,charge_dist[i],x_0+i*delta[0],y_0+i*delta[1],z_0+i*delta[2],mononomerId)
-		# embed()
-		# data.atoms = data.atoms[:-i+1]
-
-	return 0
-
-
-def findEnds(data, length):
-	ends = []
-	for atom in data.atoms:	
-		if atom.atomId%length == 1 or atom.atomId%length == 0:
-			ends.append(atom)	
-	return ends
-
-
-def closestApproach(ends):
-
-	P0 = [ends[0].x,ends[0].y,ends[0].z]
-	Pe = [ends[1].x,ends[1].y,ends[1].z]
-	Q0 = [ends[2].x,ends[2].y,ends[2].z]
-	Qe = [ends[3].x,ends[3].y,ends[3].z]
-
-	u = []
-	v = []
-	xp = Pe[0]-P0[0]
-	yp = Pe[1]-P0[1]
-	zp = Pe[2]-P0[2]
-	xq = Qe[0]-Q0[0]
-	yq = Qe[1]-Q0[1]
-	zq = Qe[2]-Q0[2]
-
-	for i in range(3):
-		u.append((Pe[i]-P0[i])/math.sqrt( xp*xp + yp*yp + zp*zp ))
-
-	for i in range(3):
-		v.append((Qe[i]-Q0[i])/math.sqrt( xq*xq + yq*yq + zq*zq ))
-
-	a = u[0]*u[0] + u[1]*u[1] + u[2]*u[2]
-	b = u[0]*v[0] + u[1]*v[1] + u[2]*v[2]
-	c = v[0]*v[0] + v[1]*v[1] + v[2]*v[2]
-	d = u[0]*(P0[0]-Q0[0]) + u[1]*(P0[1]-Q0[1]) + u[2]*(P0[2]-Q0[2])
-	e = v[0]*(P0[0]-Q0[0]) + v[1]*(P0[1]-Q0[1]) + v[2]*(P0[2]-Q0[2])
-
-	u_np = np.array(u)
-	v_np = np.array(v)
-	P0_np = np.array(P0)
-	Q0_np = np.array(Q0)
-
-	closest = (P0_np - Q0_np) + ((b*e - c*d)*u_np - (a*e -b*d)*v_np)/(a*c - b*b)
-
-	abs_dist = np.linalg.norm(closest)
 
 def cApproach(atom1, atom2, atom3, atom4):
 
@@ -131,6 +102,14 @@ def cApproach(atom1, atom2, atom3, atom4):
 	closest = np.linalg.norm( (P0 - Q0) + ((b*e - c*d)*u - (a*e -b*d)*v)/(a*c - b*b) )
 
 	return closest
+
+def closestApproach(monomer1,monomer2):
+	print "P0: ", monomer1.end0
+	print "P1: ", monomer1.end1
+	print "Q0: ", monomer2.end0
+	print "Q1: ", monomer2.end1
+
+
 
 
 def findCloseAtoms(atom1, atom2,ends,data,cutoff,monomer_length,box):
@@ -155,25 +134,25 @@ def findCloseAtoms(atom1, atom2,ends,data,cutoff,monomer_length,box):
 	return close_atoms
 
 
-def redistribute(data, box, atom0,cutoff,monomer_length):
-#	noise = random.randint()*cutoff
-	idcount = data.atoms[atom0].atomId
-	print "before: ", data.atoms[atom0]
-	moleculeId = data.atoms[atom0].moleculeId
-	for j in range(atom0, atom0+monomer_length):
-		# data.atoms[i].x -= noise
-		# data.atoms[i].y -= noise
-		# data.atoms[i].z -= noise
-		del data.atoms[atom0]
+# def redistribute(data, box, atom0,cutoff,monomer_length):
+# #	noise = random.randint()*cutoff
+# 	idcount = data.atoms[atom0].atomId
+# 	print "before: ", data.atoms[atom0]
+# 	moleculeId = data.atoms[atom0].moleculeId
+# 	for j in range(atom0, atom0+monomer_length):
+# 		# data.atoms[i].x -= noise
+# 		# data.atoms[i].y -= noise
+# 		# data.atoms[i].z -= noise
+# 		del data.atoms[atom0]
 
-	collagenMonomer(monomer_length,box,data,moleculeId,cutoff)
+# 	collagenMonomer(monomer_length,box,data,moleculeId,cutoff)
 
-	for k in range(len(data.atoms)-monomer_length,len(data.atoms)):
-		data.atoms[k].atomId = idcount
-		idcount+=1
+# 	for k in range(len(data.atoms)-monomer_length,len(data.atoms)):
+# 		data.atoms[k].atomId = idcount
+# 		idcount+=1
 
-	print "after : ", data.atoms[2970]
-	print "redistributed"
+# 	# print "after : ", data.atoms[2970]
+# 	print "redistributed"
 
 	#embed()
 
@@ -186,42 +165,43 @@ def main():
 
 	monomer_length = 30
 
-	data = lb.LammpsData(atomTypes=1, xlo = box.xlo, xhi = box.xhi, ylo = box.ylo, yhi = box.yhi, zlo = box.zlo, zhi = box.zhi)
-	data.addMass(1,1.0)
+	data = MonomerData(atomTypes=1, xlo = box.xlo, xhi = box.xhi, ylo = box.ylo, yhi = box.yhi, zlo = box.zlo, zhi = box.zhi)
+	data.addMass(1,1.0) 
 
-	#resize box which atoms can be placed in to a multiple of the voxel size (note: does not change actual box size of simulation)
-	#dim = voxelise(dim,excl_zone) 
+	# atom1 = ends[0]
+	# atom2 = ends[1]
+	# close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
 
-	for i in range(100):
-		# collagenMonomer(30,xlo,xhi,ylo,yhi,zlo,zhi,data,i,excl_zone)
-		collagenMonomer(monomer_length,box,data,i,excl_zone)
+	# ends = findEnds(data, monomer_length)
 
-	ends = findEnds(data, monomer_length)
+	# atom1 = ends[0]
+	# atom2 = ends[1]
+	# close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
 
-	atom1 = ends[0]
-	atom2 = ends[1]
-	close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
+	# ends = findEnds(data, monomer_length)
+	# atom1 = ends[0]
+	# atom2 = ends[1]
+	# close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
 
-	ends = findEnds(data, monomer_length)
-
-	atom1 = ends[0]
-	atom2 = ends[1]
-	close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
-
-	ends = findEnds(data, monomer_length)
-	atom1 = ends[0]
-	atom2 = ends[1]
-	close_atoms = findCloseAtoms(atom1,atom2,ends,data,excl_zone,monomer_length,box)
-
-	#redistribute(close_atoms)
+	charge_dist = [9.994870, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000, 
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
+				   -9.994750, 9.993550, 0.000000, 0.000000, -0.005370, 0.000000,
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
+				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
 
 
 
+	for i in range(20):
+		monomer = Monomer(monomer_length, excl_zone,charge_dist)
+		monomer.setEndPoints(box)
+		data.addMonomer(monomer,i+1)
+
+
+	closestApproach(data.monomers[0],data.monomers[1])
+	
 
 	f = open('lammps.data', 'w')
-
 	f.write(str(data))
-
 	f.close()
 
 	return 0

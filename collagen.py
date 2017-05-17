@@ -74,24 +74,23 @@ def randomSphere(r):
 
 	return round(x,3),round(y,3),round(z,3)
 
+def clamp(A0,A1,Ac):
+	for i in range(3):
+		if (Ac[i] < A0[i] and Ac[i] < A1[i]) or (Ac[i] > A0[i] and Ac[i] > A1[i]):
+			if min(abs(A1[i]-Ac[i]),abs(A0[i]-Ac[i])) == abs(A1[i]-Ac[i]):
+				Ac[i] = A1[i]
+			else:
+				Ac[i] = A0[i]
+	return Ac
 
-# def findEnds(data, length):
-# 	ends = []
-# 	for atom in data.atoms:	
-# 		if atom.atomId%length == 1 or atom.atomId%length == 0:
-# 			ends.append(atom)	
-# 	return ends
+def closestApproach(monomer1,monomer2):
+	P0 = np.array(monomer1.end0)
+	P1 = np.array(monomer1.end1)
+	Q0 = np.array(monomer2.end0)
+	Q1 = np.array(monomer2.end1)
 
-
-def cApproach(atom1, atom2, atom3, atom4):
-
-	P0 = np.array([atom1.x, atom1.y, atom1.z])
-	Pe = np.array([atom2.x, atom2.y, atom2.z])
-	Q0 = np.array([atom3.x, atom3.y, atom3.z])
-	Qe = np.array([atom4.x, atom4.y, atom4.z])
-
-	u = (Pe - P0)/np.linalg.norm(Pe-P0)
-	v = (Qe - Q0)/np.linalg.norm(Qe-Q0)
+	u = (P1 - P0)/np.linalg.norm(P1-P0)
+	v = (Q1 - Q0)/np.linalg.norm(Q1-Q0)
 
 	a = u.dot(u)
 	b = u.dot(v)
@@ -99,69 +98,33 @@ def cApproach(atom1, atom2, atom3, atom4):
 	d = u.dot(P0-Q0)
 	e = v.dot(P0-Q0)
 
-	closest = np.linalg.norm( (P0 - Q0) + ((b*e - c*d)*u - (a*e -b*d)*v)/(a*c - b*b) )
+	Sc = (b*e - c*d)/(a*c - b*b)
+	Tc = (a*e - b*d)/(a*c - b*b)
 
-	return closest
+	Pc = P0 + Sc*u
+	Qc = Q0 + Tc*v
 
-def closestApproach(monomer1,monomer2):
-	print "P0: ", monomer1.end0
-	print "P1: ", monomer1.end1
-	print "Q0: ", monomer2.end0
-	print "Q1: ", monomer2.end1
+	Pc = clamp(P0,P1,Pc)
+	Qc = clamp(Q0,Q1,Qc)
 
+	CA = np.linalg.norm(Pc - Qc)
 
+	return CA
 
-
-def findCloseAtoms(atom1, atom2,ends,data,cutoff,monomer_length,box):
-
-	close_atoms = []
-
-	flag = False
-	while flag == False:
-		for i in range(2, len(ends),2):
-			
-			flag = True
-			closest = cApproach(atom1, atom2, ends[i], ends[i+1])
-		
-			if closest <= cutoff*2:
-				close_atoms.append(i*monomer_length/2)
-				redistribute(data, box, i*monomer_length/2,cutoff,monomer_length)
-				ends = findEnds(data,monomer_length)
-				flag = False
-				break
-
-	print "close atoms: ", close_atoms
-	return close_atoms
-
-
-# def redistribute(data, box, atom0,cutoff,monomer_length):
-# #	noise = random.randint()*cutoff
-# 	idcount = data.atoms[atom0].atomId
-# 	print "before: ", data.atoms[atom0]
-# 	moleculeId = data.atoms[atom0].moleculeId
-# 	for j in range(atom0, atom0+monomer_length):
-# 		# data.atoms[i].x -= noise
-# 		# data.atoms[i].y -= noise
-# 		# data.atoms[i].z -= noise
-# 		del data.atoms[atom0]
-
-# 	collagenMonomer(monomer_length,box,data,moleculeId,cutoff)
-
-# 	for k in range(len(data.atoms)-monomer_length,len(data.atoms)):
-# 		data.atoms[k].atomId = idcount
-# 		idcount+=1
-
-# 	# print "after : ", data.atoms[2970]
-# 	print "redistributed"
-
-	#embed()
+def redistribute(monomer, noiselimit):
+	noise = random.uniform(0.5*noiselimit,1.5*noiselimit)
+	sign = -1 if random.randint(0,1) == 0 else 1
+	for i in range(3):
+		monomer.end0[i]+=sign*noise
+		monomer.end1[i]+=sign*noise
 
 
 def main():
 	
 	box = Box()
 
-	excl_zone = 1.12 #should be the lj cut off
+	num_of_monomers = 200
+	excl_zone = 1.5 #should be the lj cut off
 
 	monomer_length = 30
 
@@ -189,15 +152,47 @@ def main():
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
 
+	redistribution_noise = 8
+	redist_counter = 0
 
-
-	for i in range(20):
+	for i in range(num_of_monomers):
 		monomer = Monomer(monomer_length, excl_zone,charge_dist)
 		monomer.setEndPoints(box)
 		data.addMonomer(monomer,i+1)
 
+	overlap = None
+	offender = None
 
-	closestApproach(data.monomers[0],data.monomers[1])
+	while overlap != 0:
+		overlap = 0
+		for i in range(num_of_monomers):
+			for j in range(num_of_monomers):
+				if i < j:
+					CA = closestApproach(data.monomers[i],data.monomers[j])
+					if CA <= 3*excl_zone:
+						overlap += 1
+						offender = j
+						print "Overlap!"
+						break
+			if overlap > 0:
+				break
+
+		if overlap > 0:
+			redist_counter+=1
+			print offender
+		#	print "Redistributing: ", redist_counter
+			redistribute(data.monomers[offender],redistribution_noise)
+			overlap = None
+			
+			# for i in range(num_of_monomers):
+	 	# 		redistribute(data.monomers[i],redistribution_noise) 			
+	 	# 		overlap = None
+
+					# print "overlap:"
+					# print "i: ", i, " ", data.monomers[i].end0, " ", data.monomers[i].end1
+					# print "j: ", j, " ", data.monomers[j].end0, " ", data.monomers[j].end1
+					# print "CA: ", CA
+
 	
 
 	f = open('lammps.data', 'w')

@@ -8,7 +8,7 @@ read_data			lammps.data  					#file from which the initial configuraiton, bonds,
 neighbor        1 bin
 neigh_modify		every 1 delay 1 			#how the neighbour list is built
 pair_style			lj/cut 1.3  				#define the potential and the largest cut-off in the system
-pair_coeff      1 1 1.0 1.3 1.12
+pair_coeff      1 1 10 0.5 1.3
 #pair_coeff			1 1 10 1.0 1.3 			#interactions between particles of type 1: epsilon, sigma, cut-off
 pair_modify			shift yes 					#shift the potential to 0 at the cut-off to ensure continuity
 dump				0 all xyz 300 test.xyz		#write the output file in the xyz form every 100 steps

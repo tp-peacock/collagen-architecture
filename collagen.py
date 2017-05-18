@@ -31,9 +31,9 @@ class Monomer:
 
 	def setEndPoints(self,box):
 
-		x0 = random.uniform(box.xlo,box.xhi)
-		y0 = random.uniform(box.ylo,box.yhi)
-		z0 = random.uniform(box.zlo,box.zhi)
+		x0 = random.uniform(box.xlo + 12*self.length, box.xhi - 12*self.length)
+		y0 = random.uniform(box.ylo + 12*self.length, box.yhi - 12*self.length)
+		z0 = random.uniform(box.zlo + 12*self.length, box.zhi - 12*self.length)
 		self.end0 = [x0,y0,z0]
 
 		self.delta = randomSphere(self.atom_radius)
@@ -123,8 +123,8 @@ def main():
 	
 	box = Box()
 
-	num_of_monomers = 200
-	excl_zone = 1.5 #should be the lj cut off
+	num_of_monomers = 600
+	excl_zone = 1.3 #should be the lj cut off
 
 	monomer_length = 30
 

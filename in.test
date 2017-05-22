@@ -4,7 +4,7 @@ units				lj 							#reduced MD units
 atom_style			full  					#format of the configurational input
 boundary 			p p p 				   		#periodic boundaries in all directions
 atom_modify			sort 0 1   					#format of the output
-read_data			lammps.data  					#file from which the initial configuraiton, bonds, and angles are read
+read_data			testing2.data  					#file from which the initial configuraiton, bonds, and angles are read
 neighbor        1 bin
 neigh_modify		every 1 delay 1 			#how the neighbour list is built
 pair_style			lj/cut 1.3  				#define the potential and the largest cut-off in the system
@@ -16,5 +16,5 @@ velocity 			all create 1.0 1 			#create the initail velocities, around temp=1
 fix					 0 all rigid/nve molecule					#perform nve integration
 fix					3 all langevin 1 1 1 1000 	#add random noise via langevin equation of motion
 thermo				300							#how often the output is written
-timestep			0.002						#size of the time-step for the integration
-run					500000						#run the simulation for this number of steps
+timestep			0.008						#size of the time-step for the integration
+run					250000						#run the simulation for this number of steps

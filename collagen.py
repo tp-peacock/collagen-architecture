@@ -20,7 +20,6 @@ class Box:
 class Monomer:
 
 	def __init__(self, num_of_atoms, atom_radius, charge_dist):
-
 		self.num_of_atoms = num_of_atoms
 		self.atom_radius = atom_radius
 		self.length = num_of_atoms*atom_radius*2
@@ -29,16 +28,78 @@ class Monomer:
 		self.end1 = []
 		self.delta = None
 
+	def copy(self, monomer):
+		self.__init__(self,monomer.num_of_atoms,monomer.atom_radius,monomer.charge_dist)
+
 	def setEndPoints(self,box):
 
-		x0 = random.uniform(box.xlo + 12*self.length, box.xhi - 12*self.length)
-		y0 = random.uniform(box.ylo + 12*self.length, box.yhi - 12*self.length)
-		z0 = random.uniform(box.zlo + 12*self.length, box.zhi - 12*self.length)
+		x0 = random.uniform(box.xlo, box.xhi)
+		y0 = random.uniform(box.ylo, box.yhi)
+		z0 = random.uniform(box.zlo, box.zhi)
 		self.end0 = [x0,y0,z0]
 
 		self.delta = randomSphere(self.atom_radius)
+		#self.end1 = [None,None,None]
+
+		# if x0 < (box.xhi + box.xlo)/2:
+		# 	self.end1[0] = x0+abs(self.delta[0]*self.length)
+		# else:
+		# 	self.end1[0] = x0-abs(self.delta[0]*self.length)
+
+		# if y0 < (box.yhi + box.ylo)/2:
+		# 	self.end1[1] = y0+abs(self.delta[1]*self.length)
+		# else:
+		# 	self.end1[1] = y0-abs(self.delta[1]*self.length)
+
+		# if z0 < (box.zhi + box.zlo)/2:
+		# 	self.end1[2] = z0+abs(self.delta[2]*self.length)
+		# else:
+		# 	self.end1[2] = z0-abs(self.delta[2]*self.length)
+
+		
 		self.end1 = [x0+self.delta[0]*self.length,y0+self.delta[1]*self.length,z0+self.delta[2]*self.length]
+
+		if self.end1[0] > box.xhi - 2.0:
+		#	embed()
+			self.end0[0] -= self.end1[0] - (box.xhi - 2.0)
+			self.end1[0] = box.xhi-2.0
+
+		if self.end1[0] < box.xlo + 2.0:
+			self.end0[0] -= self.end1[0] - (box.xlo + 2.0)
+			self.end1[0] = box.xlo +2.0
+
+		if self.end1[1] > box.yhi - 2.0:
+			self.end0[1] -= self.end1[1] - (box.yhi - 2.0)
+			self.end1[1] = box.yhi - 2.0
+
+		if self.end1[1] < box.ylo + 2.0:
+			self.end0[1] -= self.end1[1] - (box.ylo + 2.0)
+			self.end1[1] = box.ylo + 2.0
+
+		if self.end1[2] > box.zhi - 2.0:
+			self.end0[2] -= self.end1[2] - (box.zhi - 2.0)
+			self.end1[2] = box.zhi - 2.0
+
+		if self.end1[2] < box.zlo + 2.0:
+			self.end0[2] -= self.end1[2] - (box.zlo + 2.0)
+			self.end1[2] = box.zlo + 2.0
+
+
 		return 0
+		# print "end0: ", self.end0
+		# print "end1: ", self.end1
+		# print "x_diff", self.end1[0]  -self.end0[0]
+		# print "y_diff", self.end1[1]  -self.end0[1]
+		# print "z_diff", self.end1[2]  -self.end0[2]
+		# print "length", np.linalg.norm(np.array(self.end1)-np.array(self.end0))
+		# print self.length
+
+		
+		# for i in range(len(self.end1)):
+		# 	if self.end1[i] > 50.0 or self.end1[i] < -50.0:
+		# 		embed()
+
+	#	return 0
 
 
 class MonomerData(lb.LammpsData):
@@ -51,11 +112,35 @@ class MonomerData(lb.LammpsData):
 	def addMonomer(self,monomer,monomerId):
 		
 		for i in range(monomer.num_of_atoms):
+
+			# if monomer.end1[0] >= monomer.end0[0]:	
+			# 	proj_x = monomer.end0[0]+abs(i*monomer.delta[0])
+			# else:
+			# 	proj_x = monomer.end0[0]-abs(i*monomer.delta[0])
+
+			# if monomer.end1[1] >= monomer.end0[1]:
+			# 	proj_y = monomer.end0[1]+abs(i*monomer.delta[1])
+			# else:
+			# 	proj_y = monomer.end0[1]-abs(i*monomer.delta[1])
+
+			# if monomer.end1[2] >= monomer.end0[2]:
+			# 	proj_z = monomer.end0[2]+abs(i*monomer.delta[2])
+			# else:
+			# 	proj_z = monomer.end0[2]-abs(i*monomer.delta[2])
+
+			# x = proj_x
+			# y = proj_y
+			# z = proj_z
+
+			x = monomer.end0[0]+i*monomer.delta[0]	
+			y = monomer.end0[1]+i*monomer.delta[1]
+			z = monomer.end0[2]+i*monomer.delta[2]		
+
 			self.addAtom(1,
 				         monomer.charge_dist[i],
-				         monomer.end0[0]+i*monomer.delta[0],
-						 monomer.end0[1]+i*monomer.delta[1],
-						 monomer.end0[2]+i*monomer.delta[2],
+				         x,
+						 y,
+						 z,
 						 monomerId)
 		self.monomers.append(monomer)
 		return monomerId
@@ -111,6 +196,9 @@ def closestApproach(monomer1,monomer2):
 
 	return CA
 
+def isWithinProximity(monomer1,monomer2,proximity):
+	return True if closestApproach(monomer1,monomer2) <= proximity else False
+
 def redistribute(monomer, noiselimit):
 	noise = random.uniform(0.5*noiselimit,1.5*noiselimit)
 	sign = -1 if random.randint(0,1) == 0 else 1
@@ -118,13 +206,45 @@ def redistribute(monomer, noiselimit):
 		monomer.end0[i]+=sign*noise
 		monomer.end1[i]+=sign*noise
 
+def buildNewMonomer(monomer,box):
+	new_mon = Monomer(monomer.num_of_atoms, monomer.atom_radius, monomer.charge_dist)
+	new_mon.setEndPoints(box)
+	return new_mon
+
+def replace_monomer(empty_monomers, monomer_length, atom_radius, charge_dist, box, offender, excl_zone):
+	new_mon = Monomer(monomer_length, atom_radius, charge_dist)
+	new_mon.setEndPoints(box)
+	empty_monomers[offender] = new_mon
+	for i in range(offender):
+		CA = closestApproach(empty_monomers[i],empty_monomers[offender])
+		if CA <= 3*excl_zone:
+			print "Overlap!"
+			replace_monomer(empty_monomers, monomer_length, atom_radius, charge_dist, box, offender, excl_zone)
+
+
+def overlapsWithAny(monomer1,monomerIndex,monomers,proximity):
+	for i in range(len(monomers)):
+		if i!=monomerIndex:
+			monomer2 = monomers[i]
+			if isWithinProximity(monomer1,monomer2,proximity):
+				return True
+	return False
+
+def fixOverlaps(monomer1,monomerIndex,monomers,proximity,box):
+	if not overlapsWithAny(monomer1,monomerIndex,monomers,proximity) :
+		return monomers
+	else:
+		monomers[monomerIndex] = buildNewMonomer(monomer1,box)
+		return fixOverlaps(monomers[monomerIndex],monomerIndex,monomers,proximity,box)
+
 
 def main():
 	
 	box = Box()
 
-	num_of_monomers = 600
+	num_of_monomers = 2000
 	excl_zone = 1.3 #should be the lj cut off
+	atom_radius = 0.5
 
 	monomer_length = 30
 
@@ -152,50 +272,63 @@ def main():
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, 0.000000,
 				   0.000000, -0.005370, 0.000000, 0.000000, -0.005370, -9.999900]
 
-	redistribution_noise = 8
+	redistribution_noise = 1
 	redist_counter = 0
+	empty_monomers = []
 
 	for i in range(num_of_monomers):
-		monomer = Monomer(monomer_length, excl_zone,charge_dist)
+		monomer = Monomer(monomer_length, atom_radius,charge_dist)
 		monomer.setEndPoints(box)
-		data.addMonomer(monomer,i+1)
+	#	data.addMonomer(monomer,i+1)
+		empty_monomers.append(monomer)
 
 	overlap = None
 	offender = None
 
-	while overlap != 0:
-		overlap = 0
-		for i in range(num_of_monomers):
-			for j in range(num_of_monomers):
-				if i < j:
-					CA = closestApproach(data.monomers[i],data.monomers[j])
-					if CA <= 3*excl_zone:
-						overlap += 1
-						offender = j
-						print "Overlap!"
-						break
-			if overlap > 0:
-				break
+	for i in range(num_of_monomers):
+		print "building: ", i
+		monomer1 = empty_monomers[i]
+		empty_monomers = fixOverlaps(monomer1,i,empty_monomers,2*excl_zone,box)
 
-		if overlap > 0:
-			redist_counter+=1
-			print offender
-		#	print "Redistributing: ", redist_counter
-			redistribute(data.monomers[offender],redistribution_noise)
-			overlap = None
-			
-			# for i in range(num_of_monomers):
-	 	# 		redistribute(data.monomers[i],redistribution_noise) 			
-	 	# 		overlap = None
 
-					# print "overlap:"
-					# print "i: ", i, " ", data.monomers[i].end0, " ", data.monomers[i].end1
-					# print "j: ", j, " ", data.monomers[j].end0, " ", data.monomers[j].end1
-					# print "CA: ", CA
+	# while overlap != 0:
+	# 	overlap = 0
+	# 	for i in range(num_of_monomers):
+	# 		for j in range(num_of_monomers):
+	# 			if i < j
+	# 			#	CA = closestApproach(data.monomers[i],data.monomers[j])
+	# 				CA = closestApproach(empty_monomers[i],empty_monomers[j])
+	# 				if CA <= 3*excl_zone:
+	# 					overlap += 1
+	# 					offender = j
+	# 					print "Overlap!"
+	# 					break
+	# 		if overlap > 0:
+	# 			break
 
+	# 	if overlap > 0:
+	# 		redist_counter+=1
+	# 		print "comparing i: ", i, " offender: ", offender
+	# 		# empty_monomers.remove(empty_monomers[j])
+	# 		# new_mon = Monomer(monomer_length, atom_radius,charge_dist)
+	# 		# new_mon.setEndPoints(box)
+	# 		# empty_monomers.append(new_mon)
+
+	# 		replace_monomer(empty_monomers, monomer_length, atom_radius, charge_dist, box, offender, excl_zone)
+
+
+	# 	#	redistribute(data.monomers[offender],redistribution_noise)
+
+	# 		overlap = None
+
+
+
+	for i in range(len(empty_monomers)):
+		data.addMonomer(empty_monomers[i],i+1)
 	
 
-	f = open('lammps.data', 'w')
+#	f = open('lammps.data', 'w')
+	f = open('testing2.data', 'w')
 	f.write(str(data))
 	f.close()
 

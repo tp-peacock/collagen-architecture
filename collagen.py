@@ -242,7 +242,7 @@ def main():
 	
 	box = Box()
 
-	num_of_monomers = 2000
+	num_of_monomers = 100
 	excl_zone = 1.3 #should be the lj cut off
 	atom_radius = 0.5
 
@@ -328,7 +328,7 @@ def main():
 	
 
 #	f = open('lammps.data', 'w')
-	f = open('testing2.data', 'w')
+	f = open('small_sim.data', 'w')
 	f.write(str(data))
 	f.close()
 

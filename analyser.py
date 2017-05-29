@@ -97,18 +97,58 @@ def closestApproach(monomer1,monomer2):
 def findNeighbours(data,i):
 
 	neighbours = [data[i]]
+
 	for j in range(len(data)):
 		if j == i:
 			continue
 		else:
 			CA = closestApproach(data[i], data[j])
-			if CA <= 1:
+			if CA <= 2:
 				neighbours.append(data[j])
 
 	return neighbours
 
-def buildNeighbourFile(lines,data,filename,n, monomer_num_of_atoms):
-	neighbours = findNeighbours(data,n)
+
+def findAlignment(monomer1, monomer2):
+	P0 = np.array(monomer1.end0)
+	P1 = np.array(monomer1.end1)
+	Q0 = np.array(monomer2.end0)
+	Q1 = np.array(monomer2.end1)
+
+	# u = (P1 - P0)/np.linalg.norm(P1-P0)
+	# v = (Q1 - Q0)/np.linalg.norm(Q1-Q0)
+
+	u = (P1 - P0)
+	v = (Q1 - Q0)
+
+	dproduct = u.dot(v)
+	mproduct = np.linalg.norm(u)*np.linalg.norm(v)
+
+#	print dproduct, mproduct
+
+	error = 2
+
+	if dproduct >= mproduct - error and dproduct <= mproduct + error:
+		return "aligned"
+	elif dproduct >= -mproduct - error and dproduct <= -mproduct + error:
+		return "anti-aligned"
+	else:
+		return "not aligned"
+
+
+def findFibres(neighbours):
+	aligned = []
+
+	for i in range(len(neighbours)):
+
+		neigh = findAlignment(neighbours[0],neighbours[i]) 
+		if neigh == "aligned" or neigh == "anti-aligned":
+			aligned.append(neighbours[i])
+
+	return aligned
+
+
+def buildNeighbourFile(lines,data,filename,neighbours, monomer_num_of_atoms):
 	f = open(filename, 'w')
 	f.write(str(len(neighbours)*monomer_num_of_atoms)+'\n')
 	f.write('Atoms. Timestep: 0\n')
@@ -133,12 +173,37 @@ def main():
 
 	data = buildMonomers(lines, monomer_num_of_atoms, atom_radius)
 
-	if '-n' in sys.argv:
-		n = sys.argv.index('-n')
-		buildNeighbourFile(lines,data,"neighbours_of_"+str(sys.argv[n-1])+".xyz", int(sys.argv[n-1]), monomer_num_of_atoms)
 
-	findNeighbours(data,0)
 
+
+	if '-n' in sys.argv and '-a' in sys.argv:
+		n = int(sys.argv[sys.argv.index('-n')-1])
+		print "n: ", n
+		neighbours = findNeighbours(data,n)
+
+		aligned = findFibres(neighbours)
+		buildNeighbourFile(lines,data,"neighbours_of_"+str(n)+".xyz", aligned, monomer_num_of_atoms)
+
+
+	if '-n' not in sys.argv and '-a' in sys.argv:
+		n = int(sys.argv[sys.argv.index('-a')-1])
+		print "n: ", n
+		neighbours = findNeighbours(data,n)
+
+		aligned = findFibres(neighbours)
+
+
+	if '-n' in sys.argv and '-a' not in sys.argv:
+		n = int(sys.argv[sys.argv.index('-n')-1])
+		neighbours = findNeighbours(data,n)
+		buildNeighbourFile(lines,data,"neighbours_of_"+str(n)+".xyz", neighbours, monomer_num_of_atoms)
+
+
+	# for z in range(0,2000):
+	# 	neighbours = findNeighbours(data,z)
+	# 	aligned = findFibres(neighbours)
+	# 	if len(aligned) > 2:
+	# 		print "z: ", z, "aligned: ", len(aligned) 
 
 
 	return 0

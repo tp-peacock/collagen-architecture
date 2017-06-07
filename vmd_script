@@ -1,17 +1,27 @@
 display depthcue off 
-set sel_M [atomselect top "element H"]
-set sel_C [atomselect top "element He"]
-set sel_D [atomselect top "element Li"]
-
-color Element H 10
-color Element He 1
-color Element Li 2
-color Element Li 3
-color Element Li 4
-color Element Li 5
-color Element Li 6
-
 display projection orthographic
+
+set sel_M [atomselect top "element H"]
+$sel_M set radius 0.5
+set sel_C [atomselect top "element He"]
+$sel_C set radius 0.5
+set sel_D [atomselect top "element Li"]
+$sel_D set radius 0.5
+set sel_D [atomselect top "element Be"]
+$sel_D set radius 0.5
+set sel_D [atomselect top "element B"]
+$sel_D set radius 0.5
+set sel_D [atomselect top "element C"]
+$sel_D set radius 0.5
+
+
+color Element H 22
+color Element He 1
+color Element Li 3
+color Element Be 4
+color Element B 5
+color Element C 6
+
 mol delrep 0 top
 
 mol selection element H
@@ -23,20 +33,32 @@ mol addrep top
 mol selection element Li
 mol color Element
 mol addrep top
-
+mol selection element Be
+mol color Element
+mol addrep top
+mol selection element B
+mol color Element
+mol addrep top
+mol selection element C
+mol color Element
+mol addrep top
 
 mol modstyle 0 top {VDW 1.0 50}
 mol modstyle 1 top {VDW 1.0 50}
 mol modstyle 2 top {VDW 1.0 50}
+mol modstyle 3 top {VDW 1.0 50}
+mol modstyle 4 top {VDW 1.0 50}
+mol modstyle 5 top {VDW 1.0 50}
+mol modstyle 6 top {VDW 1.0 50}
 
 
 mol modmaterial 0 top Diffuse
 mol modmaterial 1 top Diffuse
 mol modmaterial 2 top Diffuse
-
-$sel_M set radius 0.5
-$sel_C set radius 0.5
-$sel_D set radius 0.5
+mol modmaterial 3 top Diffuse
+mol modmaterial 4 top Diffuse
+mol modmaterial 5 top Diffuse
+mol modmaterial 6 top Diffuse
 
 
 color Display Background white

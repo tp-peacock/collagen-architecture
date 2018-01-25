@@ -1,6 +1,8 @@
 import sys
 from IPython import embed
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 class Monomer:
 
@@ -103,7 +105,7 @@ def findNeighbours(data,i):
 			continue
 		else:
 			CA = closestApproach(data[i], data[j])
-			if CA <= 2:
+			if CA <= 1.3:
 				neighbours.append(data[j])
 
 	return neighbours
@@ -126,7 +128,7 @@ def findAlignment(monomer1, monomer2):
 
 #	print dproduct, mproduct
 
-	error = 2
+	error = 1.5
 
 	if dproduct >= mproduct - error and dproduct <= mproduct + error:
 		return "aligned"
@@ -137,16 +139,44 @@ def findAlignment(monomer1, monomer2):
 
 
 def findFibres(neighbours):
-	aligned = []
+	aligned = [neighbours[0]]
+	align_count = 0
+	anti_align_count = 0
 
-	for i in range(len(neighbours)):
+	align_d_spacing = []
+	anti_align_d_spacing = []
+
+	for i in range(1,len(neighbours)):
 
 		neigh = findAlignment(neighbours[0],neighbours[i]) 
 		if neigh == "aligned" or neigh == "anti-aligned":
 			aligned.append(neighbours[i])
+		if neigh == "aligned":
+			align_count += 1
+			dspacing = findDSpacing(neighbours[0],neighbours[i])
+			align_d_spacing.append(dspacing)
+		if neigh == "anti-aligned":
+			anti_align_count += 1
+			dspacing = findDSpacing(neighbours[0],neighbours[i])
+			anti_align_d_spacing.append(dspacing)
 
-	return aligned
+	return aligned, align_count, anti_align_count, align_d_spacing, anti_align_d_spacing
 
+
+def findDSpacing(monomer1, monomer2):
+	P0 = np.array(monomer1.end0)
+	P1 = np.array(monomer1.end1)
+	Q0 = np.array(monomer2.end0)
+	Q1 = np.array(monomer2.end1)
+
+	d_vector = (P1 + P0)/2 - (Q1 + Q0)/2
+	d = np.linalg.norm(d_vector)
+
+	length = np.linalg.norm(P1 - P0)
+
+	d_spacing = d*30/length
+
+	return d_spacing
 
 def buildNeighbourFile(lines,data,filename,neighbours, monomer_num_of_atoms):
 	f = open(filename, 'w')
@@ -157,6 +187,27 @@ def buildNeighbourFile(lines,data,filename,neighbours, monomer_num_of_atoms):
 		for j in range(monomer_num_of_atoms):
 			f.write(lines[start_atom+j])
 	f.close()
+
+
+def buildPlots(raw_spacings):
+	int_spacings=[]
+	spacings = [item for sublist in raw_spacings for item in sublist] 
+	for i in range(len(spacings)):
+		int_spacings.append(int(round(spacings[i])))
+
+	x = []
+	y = []
+	
+	for i in range(1,max(int_spacings)):
+		x.append(i)
+		y.append(int_spacings.count(i))
+
+	plot = 0
+
+
+
+	return plot, int_spacings, x, y
+
 
 
 def main():
@@ -181,7 +232,7 @@ def main():
 		print "n: ", n
 		neighbours = findNeighbours(data,n)
 
-		aligned = findFibres(neighbours)
+		aligned = findFibres(neighbours)[0]
 		buildNeighbourFile(lines,data,"neighbours_of_"+str(n)+".xyz", aligned, monomer_num_of_atoms)
 
 
@@ -190,7 +241,7 @@ def main():
 		print "n: ", n
 		neighbours = findNeighbours(data,n)
 
-		aligned = findFibres(neighbours)
+		aligned = findFibres(neighbours)[0]
 
 
 	if '-n' in sys.argv and '-a' not in sys.argv:
@@ -199,11 +250,86 @@ def main():
 		buildNeighbourFile(lines,data,"neighbours_of_"+str(n)+".xyz", neighbours, monomer_num_of_atoms)
 
 
-	# for z in range(0,2000):
-	# 	neighbours = findNeighbours(data,z)
-	# 	aligned = findFibres(neighbours)
+	total_align_count = []
+	total_anti_align_count = []
+	aligned_d_spacings = []
+	anti_aligned_d_spacings = []
+
+	for z in range(0,2000):
+	 	neighbours = findNeighbours(data,z)
+	 	aligned = findFibres(neighbours)
+	 	total_align_count.append(aligned[1])
+	 	total_anti_align_count.append(aligned[2])
+	 	aligned_d_spacings.append(aligned[3])
+	 	anti_aligned_d_spacings.append(aligned[4])
+#	 	print aligned[0], aligned[1], aligned[2]
+
+
+	running_align_total = 0
+	running_anti_align_total = 0
+
+#	print max(total_align_count)
+#	print max(total_anti_align_count)
+
+	for i in range(max(total_align_count),0,-1):
+		running_align_total += total_align_count.count(i)
+		print "No. that have ", i, "aligned neighbours", running_align_total
+
+	for i in range(max(total_anti_align_count),0,-1):
+		running_anti_align_total += total_anti_align_count.count(i)
+		print "No. that have", i, "anti-aligned neighbours", running_anti_align_total
+
+
+
+	plot_data1 = buildPlots(aligned_d_spacings)
+	x1 = plot_data1[2]
+	y1 = plot_data1[3]
+
+	plot_data2 = buildPlots(anti_aligned_d_spacings)
+	x2 = plot_data2[2]
+	y2 = plot_data2[3]
+
+
+	fig = plt.figure()
+
+
+	ax = fig.add_subplot(111)
+	ax.plot(x1,y1)
+	ax.plot(x2,y2)
+	ax.spines['left'].set_position('zero')
+	ax.spines['right'].set_color('none')
+	ax.spines['bottom'].set_position('zero')
+	ax.spines['top'].set_color('none')
+
+# remove the ticks from the top and right edges
+	ax.xaxis.set_ticks_position('bottom')
+	ax.yaxis.set_ticks_position('left')
+	plt.ylabel('Frequency')
+	plt.xlabel('D Spacing (number of atoms)')
+	
+
+	ax.set_xlim([0,30])
+
+	plt.savefig('test.png')
+
+
+
+
+
+
+
+
+#	plot1 = buildPlots(aligned_d_spacings)	
+#	plot2 = buildPlots(anti_aligned_d_spacings)
+
+	embed()
 	# 	if len(aligned) > 2:
-	# 		print "z: ", z, "aligned: ", len(aligned) 
+	# 		print "z: ", z, "aligned: ", len(aligned)
+
+
+
+	print "number with aligned neighbours:      ", total_align_count
+	print "number with anti-aligned neighbours: ", total_anti_align_count
 
 
 	return 0

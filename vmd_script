@@ -16,11 +16,11 @@ $sel_D set radius 0.5
 
 
 color Element H 22
-color Element He 1
+color Element He 900
 color Element Li 3
-color Element Be 4
-color Element B 5
-color Element C 6
+color Element Be 18
+color Element B 32
+color Element C 69
 
 mol delrep 0 top
 
